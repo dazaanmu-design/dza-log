@@ -10,7 +10,7 @@
 <meta name="description" content="DZA Log - Pencatatan Keuangan Personal">
 <link rel="manifest" href="manifest.webmanifest?v=16">
 <title>DZA Log v19</title>
-<!-- BUILD: v19-wallet-bal-month-sum-filter -->
+<!-- BUILD: v19.2-nav-center-add -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -66,7 +66,7 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:260px;backgrou
 @keyframes pgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* Content Scroll */
-.content-area{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:89px}
+.content-area{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
 .content-area::-webkit-scrollbar{width:0}
 
 /* ===== PAGE HEADER ===== */
@@ -103,8 +103,50 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:260px;backgrou
 .tx-item .tm{font-size:9px;color:var(--text3);text-align:right;margin-top:2px}
 
 /* FAB */
-#fab{position:fixed;bottom:80px;right:21px;width:50px;height:50px;border-radius:14px;background:var(--hero-grad);color:#fff;border:none;font-size:20px;cursor:pointer;z-index:100;box-shadow:0 4px 16px rgba(var(--accent-rgb),0.4);display:flex;align-items:center;justify-content:center;transition:transform .2s}
-#fab:active{transform:scale(0.9)}
+#fab{display:none!important}
+#bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  display:flex;
+  justify-content:stretch;
+  align-items:flex-end;
+  padding:0 0 env(safe-area-inset-bottom,0);
+  z-index:200;
+}
+#bottom-nav .nav-items{
+  display:flex;
+  flex:1;
+  justify-content:stretch;
+  align-items:stretch;
+  min-height:56px;
+}
+.nav-add{
+  position:absolute;
+  left:50%;
+  top:0;
+  transform:translate(-50%,-42%);
+  width:58px;height:58px;
+  border-radius:18px;
+  border:3px solid var(--bg2);
+  background:var(--hero-grad);
+  color:#fff;
+  font-size:22px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 22px rgba(var(--accent-rgb),0.45);
+  z-index:210;
+  transition:transform .2s, box-shadow .2s;
+}
+.nav-add:active{transform:translate(-50%,-42%) scale(0.92)}
+.nav-add i{pointer-events:none}
+/* spacer under raised + so labels don't collide */
+.nav-item.nav-center-spacer{pointer-events:none;visibility:hidden}
+/* middle tab sits under raised + — keep label tappable */
+.nav-item[data-page="summary"]{padding-top:22px}
+.nav-item[data-page="summary"] i{opacity:.85;font-size:16px}
+
+
 
 /* ===== Bottom Nav — Lebar dibagi 5 rata, ikon lebih besar, safe area bawah ===== */
 #bottom-nav{
@@ -131,11 +173,12 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:260px;backgrou
   align-items:center;
   justify-content:center;
   gap:3px;
-  padding:10px 0 16px;
+  padding:12px 0 14px;
   cursor:pointer;
   color:var(--text3);
   transition:color .2s;
   position:relative;
+  min-width:0;
 }
 .nav-item i{font-size:20px;transition:transform .2s}
 .nav-item span{font-size:10px;font-weight:600}
@@ -392,14 +435,13 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
   </div>
 </div>
 
-<button id="fab" aria-label="Tambah transaksi"><i class="fas fa-plus"></i></button>
-
 <nav id="bottom-nav">
   <div class="nav-item active" data-page="home"><i class="fas fa-house"></i><span>Beranda</span></div>
   <div class="nav-item" data-page="wallet"><i class="fas fa-wallet"></i><span>Dompet</span></div>
   <div class="nav-item" data-page="summary"><i class="fas fa-rectangle-list"></i><span>Rekap</span></div>
   <div class="nav-item" data-page="chart"><i class="fas fa-chart-column"></i><span>Grafik</span></div>
   <div class="nav-item" data-page="settings"><i class="fas fa-gear"></i><span>Setelan</span></div>
+  <button type="button" id="nav-add" class="nav-add" aria-label="Tambah transaksi"><i class="fas fa-plus"></i></button>
 </nav>
 
 <div class="modal-overlay" id="modal-overlay"></div>
@@ -529,7 +571,7 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
    2) Type: Web app, Execute as: Me, Who has access: Anyone
    3) Deploy, lalu copy URL yang berakhiran "/exec"
    ========================================================================== */
-window.DZA_LOG_BUILD='v19-wallet-bal-month-sum-filter';
+window.DZA_LOG_BUILD='v19.2-nav-center-add';
 const CONFIG = {
   API_URL: 'https://script.google.com/macros/s/AKfycbwX1hBqRfGGXUsqkmPfwNiFaD1Y_v7DaX7J4eFXMpMvsHTPt8aAFvkhFGcH-zHi5DIy/exec'
 };
@@ -699,7 +741,7 @@ function registerSW(){
 }
 
 
-function nav(p){S.currentPage=p;S.expandedSum=null;document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===p));document.getElementById('fab').style.display=p==='home'?'flex':'none';render(p)}
+function nav(p){S.currentPage=p;S.expandedSum=null;document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===p));render(p)}
 function render(p){switch(p){case'home':rHome();break;case'wallet':rWallet();break;case'summary':rSummary();break;case'chart':rChart();break;case'settings':rSettings();break}}
 function openM(id){document.getElementById('modal-overlay').classList.add('show');document.getElementById(id).classList.add('show')}
 function closeM(id){document.getElementById('modal-overlay').classList.remove('show');document.getElementById(id).classList.remove('show')}
@@ -1515,8 +1557,8 @@ function loadData(d,opts={}){if(!d)return;S.wallets=d.wallets||[];S.categories=d
 
 function init(){
   registerSW();
-  document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>nav(n.dataset.page)));
-  document.getElementById('fab').addEventListener('click',openAddModal);
+  document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>nav(n.dataset.page)));
+  const navAdd=document.getElementById('nav-add');if(navAdd)navAdd.addEventListener('click',(e)=>{e.stopPropagation();openAddModal()});
   document.querySelectorAll('#type-toggle button').forEach(b=>b.addEventListener('click',()=>{S.addType=b.dataset.type;S.selectedCat=null;updateTT()}));
   document.querySelectorAll('#ec-type-toggle button').forEach(b=>b.addEventListener('click',()=>{S.ecType=b.dataset.type;updateECToggle()}));
   document.getElementById('btn-save-tx').addEventListener('click',saveTx);
