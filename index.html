@@ -1,22 +1,30 @@
 <!DOCTYPE html>
-<html lang="id" data-theme="dark">
+<html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0060AF">
-<meta name="description" content="DZA Log - Pencatatan Keuangan Personal">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DZA Log</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <style>
-/* PLACEHOLDER - will replace with full content */
-body{font-family:system-ui;background:#05080E;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;background:#05080E;color:#F1F5F9;text-align:center;padding:24px}
+.box{max-width:420px}
+h1{font-size:22px;margin:0 0 12px;color:#4C9AFF}
+p{color:#8B9AB8;line-height:1.5;margin:0 0 16px}
+code{background:#111B2E;padding:2px 6px;border-radius:6px;font-size:13px}
+ol{text-align:left;color:#8B9AB8;line-height:1.7}
 </style>
 </head>
 <body>
-<p>Loading DZA Log... Upload incomplete - please wait for full index.html</p>
+<div class="box">
+<h1>DZA Log</h1>
+<p>Repo sudah siap. Silakan upload file <code>index.html</code> dari ZIP deploy (via GitHub → Add file → Upload files), lalu aktifkan GitHub Pages.</p>
+<ol>
+<li>Buka repo ini di GitHub</li>
+<li>Add file → Upload files → pilih <code>index.html</code> dari ZIP</li>
+<li>Settings → Pages → Source: Deploy from branch → <code>main</code> / <code>/</code> (root)</li>
+<li>Tunggu 1–2 menit, buka: <code>https://dazaanmu-design.github.io/dza-log/</code></li>
+</ol>
+</div>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{})}</script>
 </body>
 </html>
