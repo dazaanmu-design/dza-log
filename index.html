@@ -10,7 +10,7 @@
 <meta name="description" content="DZA Log - Pencatatan Keuangan Personal">
 <link rel="manifest" href="manifest.webmanifest?v=16">
 <title>DZA Log v19</title>
-<!-- BUILD: v19.6-floating-pill-nav -->
+<!-- BUILD: v19.7-plus-center-v -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -127,9 +127,8 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:260px;backgrou
 
 .nav-add{
   flex:0 0 auto;
-  width:48px;height:48px;
-  margin:0 4px;
-  margin-top:-20px;
+  width:52px;height:52px;
+  margin:0 6px;
   border-radius:50%;
   border:3px solid var(--bg);
   background:var(--hero-grad);
@@ -142,6 +141,7 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:260px;backgrou
   transition:transform .2s, box-shadow .2s;
   align-self:center;
   position:relative;
+  /* no negative margin — flex center = overlap atas & bawah simetris */
 }
 .nav-add:active{transform:scale(0.92)}
 .nav-add i{pointer-events:none}
@@ -161,9 +161,11 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:260px;backgrou
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:6px 10px;
+  padding:4px 10px;
+  min-height:52px;
   z-index:200;
   box-shadow:0 8px 28px rgba(0,0,0,.18);
+  overflow:visible;
 }
 #bottom-nav::before{display:none!important;content:none}
 .nav-item{
@@ -173,7 +175,7 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:260px;backgrou
   align-items:center;
   justify-content:center;
   gap:2px;
-  padding:8px 4px;
+  padding:6px 4px;
   cursor:pointer;
   color:var(--text3);
   transition:color .2s;
@@ -579,7 +581,7 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
    2) Type: Web app, Execute as: Me, Who has access: Anyone
    3) Deploy, lalu copy URL yang berakhiran "/exec"
    ========================================================================== */
-window.DZA_LOG_BUILD='v19.6-floating-pill-nav';
+window.DZA_LOG_BUILD='v19.7-plus-center-v';
 const CONFIG = {
   API_URL: 'https://script.google.com/macros/s/AKfycbwX1hBqRfGGXUsqkmPfwNiFaD1Y_v7DaX7J4eFXMpMvsHTPt8aAFvkhFGcH-zHi5DIy/exec'
 };
