@@ -9,8 +9,8 @@
 <meta name="theme-color" content="#0060AF">
 <meta name="description" content="DZA Log - Pencatatan Keuangan Personal">
 <link rel="manifest" href="manifest.webmanifest?v=16">
-<title>DZA Log v18</title>
-<!-- BUILD: v18-wallet-hist-cat-expand -->
+<title>DZA Log v19</title>
+<!-- BUILD: v19-wallet-bal-month-sum-filter -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -317,6 +317,15 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
 .tx-item .dir.in{color:var(--income)}
 .tx-item .dir.out{color:var(--expense)}
 
+.tx-item .bal-after{font-size:9px;color:var(--text3);text-align:right;margin-top:2px;font-weight:600}
+.wallet-month-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 21px 13px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:13px}
+.wallet-month-nav button{width:34px;height:34px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.wallet-month-nav button:active{transform:scale(.95)}
+.wallet-month-nav .wm-label{font-size:13px;font-weight:800;text-align:center;flex:1}
+.sum-row.chart-filter-row{cursor:pointer}
+.sum-row.chart-filter-row.active-filter{background:rgba(var(--accent-rgb),.12)}
+
+
 
 /* Toast */
 #toast{position:fixed;top:calc(env(safe-area-inset-top,0px) + 21px);left:50%;transform:translateX(-50%) translateY(-80px);background:var(--card);border:1px solid var(--border);padding:10px 21px;border-radius:10px;font-size:11px;font-weight:600;z-index:999;transition:transform .35s cubic-bezier(.32,.72,0,1);box-shadow:var(--shadow);display:flex;align-items:center;gap:8px}
@@ -520,11 +529,11 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
    2) Type: Web app, Execute as: Me, Who has access: Anyone
    3) Deploy, lalu copy URL yang berakhiran "/exec"
    ========================================================================== */
-window.DZA_LOG_BUILD='v18-wallet-hist-cat-expand';
+window.DZA_LOG_BUILD='v19-wallet-bal-month-sum-filter';
 const CONFIG = {
   API_URL: 'https://script.google.com/macros/s/AKfycbwX1hBqRfGGXUsqkmPfwNiFaD1Y_v7DaX7J4eFXMpMvsHTPt8aAFvkhFGcH-zHi5DIy/exec'
 };
-const CACHE_KEY='dza-log-data-v18';
+const CACHE_KEY='dza-log-data-v19';
 const CACHE_TTL=1000*60*60*24*14;
 
 /* Pengganti google.script.run — dipanggil dari Netlify lewat fetch biasa.
@@ -548,7 +557,7 @@ const S={
   chartInst:{},expandedSum:null,expandedCat:null,
   ewId:null,ewIcon:'fa-wallet',ewColor:'#0060AF',
   ecId:null,ecType:'expense',ecIcon:'fa-tag',ecColor:'#636E72',
-  themeMode:localStorage.getItem('dza-theme')||'dark',txEditId:null,trfEditId:null,currentWalletId:null,adjType:'income',adjCat:null
+  themeMode:localStorage.getItem('dza-theme')||'dark',txEditId:null,trfEditId:null,currentWalletId:null,adjType:'income',adjCat:null,walletHistYM:null
 };
 
 const MO=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -812,19 +821,57 @@ function openEditTrf(tx){
 
 
 
-function getWalletTransactions(walletId){
+function getWalletTransactions(walletId, ym){
   const id=String(walletId);
-  return S.transactions.filter(t=>{
+  let list=S.transactions.filter(t=>{
     if(t.type==='transfer') return String(t.walletId)===id || String(t.toWalletId)===id;
     return String(t.walletId)===id;
-  }).slice().sort((a,b)=>{
+  });
+  if(ym){
+    list=list.filter(t=>String(t.date||'').startsWith(ym));
+  }
+  return list.slice().sort((a,b)=>{
     const d=(b.date||'').localeCompare(a.date||'');
     if(d) return d;
     return String(b.createdAt||'').localeCompare(String(a.createdAt||''));
   });
 }
-function walletTxItem(tx, walletId){
+function walletTxDelta(tx, walletId){
   const wid=String(walletId);
+  const amt=Number(tx.amount)||0;
+  if(tx.type==='transfer'){
+    if(String(tx.walletId)===wid) return -amt;
+    if(String(tx.toWalletId)===wid) return +amt;
+    return 0;
+  }
+  if(String(tx.walletId)!==wid) return 0;
+  if(tx.type==='income') return +amt;
+  if(tx.type==='expense') return -amt;
+  return 0;
+}
+function computeWalletRunningBalances(walletId, ym){
+  const w=getW(walletId); if(!w) return {};
+  const all=getWalletTransactions(walletId, null);
+  // chronological ascending for running calc from current balance backwards
+  const chrono=all.slice().sort((a,b)=>{
+    const d=(a.date||'').localeCompare(b.date||'');
+    if(d) return d;
+    return String(a.createdAt||'').localeCompare(String(b.createdAt||''));
+  });
+  // Work backwards from current balance: after last tx balance = current
+  const after={};
+  let bal=Number(w.balance)||0;
+  // Walk newest→oldest: after[tx]=bal, then undo delta
+  const newestFirst=chrono.slice().reverse();
+  newestFirst.forEach(tx=>{
+    after[String(tx.id)]=bal;
+    bal-=walletTxDelta(tx, walletId);
+  });
+  return after;
+}
+function walletTxItem(tx, walletId, balAfter){
+  const wid=String(walletId);
+  const balHtml=balAfter!=null?`<div class="bal-after">Saldo ${fRp(balAfter)}</div>`:'';
   if(tx.type==='transfer'){
     const fromMe=String(tx.walletId)===wid;
     const otherId=fromMe?tx.toWalletId:tx.walletId;
@@ -832,25 +879,50 @@ function walletTxItem(tx, walletId){
     const dir=fromMe?'out':'in';
     const label=fromMe?('Transfer ke '+other):('Transfer dari '+other);
     const sg=fromMe?'-':'+';
-    return`<div class="tx-item" data-id="${tx.id}"><div class="ico" style="background:rgba(76,154,255,.14);color:var(--transfer)"><i class="fas fa-right-left"></i></div><div class="inf"><div class="dir ${dir}">${fromMe?'Keluar':'Masuk'}</div><div class="nm">${label}</div><div class="nt">${tx.note||'Transfer Dompet'}</div></div><div><div class="amt ${fromMe?'exp':'inc'}">${sg}${fRp(tx.amount)}</div><div class="tm">${fDate(tx.date)}</div></div></div>`;
+    return`<div class="tx-item" data-id="${tx.id}"><div class="ico" style="background:rgba(76,154,255,.14);color:var(--transfer)"><i class="fas fa-right-left"></i></div><div class="inf"><div class="dir ${dir}">${fromMe?'Keluar':'Masuk'}</div><div class="nm">${label}</div><div class="nt">${tx.note||'Transfer Dompet'}</div></div><div><div class="amt ${fromMe?'exp':'inc'}">${sg}${fRp(tx.amount)}</div>${balHtml}<div class="tm">${fDate(tx.date)}</div></div></div>`;
   }
   const c=getC(tx.categoryId);const icon=c?c.icon:'fa-ellipsis';const color=c?c.color:'#636E72';const cn=c?c.name:'Lainnya';
   const isIn=tx.type==='income';
   const tc=isIn?'inc':'exp';const sg=isIn?'+':'-';
-  return`<div class="tx-item" data-id="${tx.id}"><div class="ico" style="background:${color}22;color:${color}">${iconMarkup(icon)}</div><div class="inf"><div class="dir ${isIn?'in':'out'}">${isIn?'Masuk':'Keluar'}</div><div class="nm">${cn}</div><div class="nt">${tx.note||'-'}</div></div><div><div class="amt ${tc}">${sg}${fRp(tx.amount)}</div><div class="tm">${fDate(tx.date)}</div></div></div>`;
+  return`<div class="tx-item" data-id="${tx.id}"><div class="ico" style="background:${color}22;color:${color}">${iconMarkup(icon)}</div><div class="inf"><div class="dir ${isIn?'in':'out'}">${isIn?'Masuk':'Keluar'}</div><div class="nm">${cn}</div><div class="nt">${tx.note||'-'}</div></div><div><div class="amt ${tc}">${sg}${fRp(tx.amount)}</div>${balHtml}<div class="tm">${fDate(tx.date)}</div></div></div>`;
+}
+function currentWalletHistYM(){
+  if(S.walletHistYM) return S.walletHistYM;
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function shiftWalletHistMonth(delta){
+  const ym=currentWalletHistYM();
+  const [y,m]=ym.split('-').map(Number);
+  const dt=new Date(y,m-1+delta,1);
+  S.walletHistYM=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+  renderWalletHistoryBody();
+}
+function walletHistMonthLabel(ym){
+  const [y,m]=ym.split('-').map(Number);
+  return MO[m-1]+' '+y;
 }
 function openWalletHistory(){
   const w=getW(S.currentWalletId);if(!w)return;
   closeM('modal-wallet-action');
+  // default current month
+  if(!S.walletHistYM){
+    const d=new Date();
+    S.walletHistYM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  }
   document.getElementById('wallet-history-title').textContent='Riwayat · '+w.name;
-  const txs=getWalletTransactions(w.id);
+  renderWalletHistoryBody();
+  openM('modal-wallet-history');
+}
+function renderWalletHistoryBody(){
+  const w=getW(S.currentWalletId);if(!w)return;
+  const ym=currentWalletHistYM();
+  const txs=getWalletTransactions(w.id, ym);
+  const balMap=computeWalletRunningBalances(w.id, ym);
   let inSum=0,outSum=0;
   txs.forEach(t=>{
-    if(t.type==='transfer'){
-      if(String(t.walletId)===String(w.id)) outSum+=Number(t.amount)||0;
-      else inSum+=Number(t.amount)||0;
-    }else if(t.type==='income') inSum+=Number(t.amount)||0;
-    else if(t.type==='expense') outSum+=Number(t.amount)||0;
+    const d=walletTxDelta(t,w.id);
+    if(d>0) inSum+=d; else outSum+=Math.abs(d);
   });
   let h=`<div class="wallet-hist-head" style="padding:0 21px 13px">
     <div style="display:flex;align-items:center;gap:13px">
@@ -870,16 +942,19 @@ function openWalletHistory(){
         <div style="font-size:13px;font-weight:800;color:var(--expense);margin-top:2px">-${fRp(outSum)}</div>
       </div>
     </div>
-    <div class="wh-sub">${txs.length} transaksi di dompet ini</div>
   </div>`;
-  if(!txs.length) h+=`<div class="empty-st"><i class="fas fa-receipt"></i><p>Belum ada transaksi di dompet ini.</p></div>`;
-  else txs.forEach(t=>h+=walletTxItem(t,w.id));
+  h+=`<div class="wallet-month-nav">
+    <button type="button" onclick="shiftWalletHistMonth(-1)" aria-label="Bulan sebelumnya"><i class="fas fa-chevron-left"></i></button>
+    <div class="wm-label">${walletHistMonthLabel(ym)}</div>
+    <button type="button" onclick="shiftWalletHistMonth(1)" aria-label="Bulan berikutnya"><i class="fas fa-chevron-right"></i></button>
+  </div>`;
+  h+=`<div style="padding:0 21px 8px;font-size:10px;color:var(--text3);font-weight:600">${txs.length} transaksi di bulan ini</div>`;
+  if(!txs.length) h+=`<div class="empty-st"><i class="fas fa-receipt"></i><p>Belum ada transaksi di ${walletHistMonthLabel(ym)}.</p></div>`;
+  else txs.forEach(t=>h+=walletTxItem(t,w.id,balMap[String(t.id)]));
   document.getElementById('wallet-history-body').innerHTML=h;
-  // bind click to edit
   document.querySelectorAll('#wallet-history-body .tx-item').forEach(el=>{
     el.addEventListener('click',()=>{closeM('modal-wallet-history');openEditTx(el.dataset.id)});
   });
-  openM('modal-wallet-history');
 }
 
 function openWalletAction(id){
@@ -1058,6 +1133,35 @@ function getChartFilteredTransactions(period){
   if(f)return S.transactions.filter(t=>txInChartFilter(t,f));
   return getChartScopeTransactions(period);
 }
+
+function summaryKeyToRange(key,period){
+  if(!key)return null;
+  if(period==='daily') return {start:key,end:key};
+  if(period==='weekly'){
+    const ws=dFromStr(key); const we=sundayEnd(ws);
+    return {start:isoDate(ws),end:isoDate(we)};
+  }
+  if(period==='monthly'){
+    const [y,m]=String(key).split('-').map(Number);
+    if(!y||!m)return null;
+    const start=y+'-'+String(m).padStart(2,'0')+'-01';
+    const end=y+'-'+String(m).padStart(2,'0')+'-'+String(new Date(y,m,0).getDate()).padStart(2,'0');
+    return {start,end};
+  }
+  if(period==='yearly'){
+    const y=String(key);
+    return {start:y+'-01-01',end:y+'-12-31'};
+  }
+  return null;
+}
+function setChartFilterFromSummary(key,label,start,end){
+  const active=getActiveChartFilter();
+  if(active&&active.key===key){clearChartFilter();return}
+  S.expandedCat=null;
+  S.chartFilter={period:S.chartPeriod,key,label,start,end};
+  rChart();
+}
+
 function setChartFilter(bucket){
   if(!bucket)return;
   S.chartFilter={period:S.chartPeriod,key:bucket.key,label:bucket.label,start:bucket.start,end:bucket.end};
@@ -1125,7 +1229,10 @@ function rChart(){
   else sumData.forEach(r=>{
     const val=Number(r[type])||0;
     if(val<=0)return;
-    h+=`<div class="sum-row"><div class="sr-period">${r.label}</div><div class="sr-amts"><div class="${type==='income'?'sr-inc':'sr-exp'}">${type==='income'?'+':'-'}${fRp(val)}</div></div></div>`;
+    const range=summaryKeyToRange(r.key,p);
+    const isActive=activeFilter&&activeFilter.key===r.key;
+    const onclick=range?`onclick="setChartFilterFromSummary('${r.key}','${String(r.label).replace(/'/g,"\\'")}','${range.start}','${range.end}')"`:'';
+    h+=`<div class="sum-row chart-filter-row ${isActive?'active-filter':''}" ${onclick}><div class="sr-period">${r.label}<small style="display:block;font-size:9px;color:var(--text3);font-weight:500;margin-top:2px">${isActive?'Filter aktif · ketuk bar chart atau reset':'Ketuk untuk filter kategori'}</small></div><div class="sr-amts"><div class="${type==='income'?'sr-inc':'sr-exp'}">${type==='income'?'+':'-'}${fRp(val)}</div></div><i class="fas fa-filter" style="color:var(--text3);font-size:10px;margin-left:6px"></i></div>`;
   });
 
   h+=renderCategorySummary(p);
