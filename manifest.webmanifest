@@ -1,0 +1,11 @@
+{
+  "name": "DZA Log",
+  "short_name": "DZA Log",
+  "description": "Pencatatan keuangan personal dengan cache cepat.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#05080E",
+  "theme_color": "#0060AF",
+  "orientation": "portrait-primary"
+}
